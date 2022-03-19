@@ -1,0 +1,58 @@
+version: "3.9"
+networks:
+  test-network:
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: ${PWD}/docker/nginx/Dockerfile
+    ports:
+      - 80:80
+    volumes:
+      - ${PWD}/src/:/var/www/html
+      # Logging
+      - ${PWD}/docker/nginx/log:/var/log/nginx
+    networks:
+      - test-network
+    
+  mysql:
+    build:
+      context: .
+      dockerfile: ${PWD}/docker/mysql/Dockerfile
+    ports:
+      - 3306:3306
+    volumes:
+      - /var/lib/mysql
+      - ${PWD}/docker/mysql/log:/var/log/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      # MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: test_db
+    networks:
+      - test-network
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    links:
+      - mysql
+    networks:
+      - test-network
+
+  workspace:
+    build:
+      context: .
+      dockerfile: ${PWD}/docker/php/Dockerfile
+    networks:
+      - test-network
+    volumes:
+      - ${PWD}/src/:/var/www/html
+      - ${PWD}/docker/php/config/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      - nginx
